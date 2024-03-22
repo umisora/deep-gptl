@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "ai_translation_gpt" "\0"
+            VALUE "FileDescription", "Deep-GPTL" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ai_translation_gpt" "\0"
+            VALUE "InternalName", "Deep-GPTL" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2023 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ai_translation_gpt.exe" "\0"
-            VALUE "ProductName", "ai_translation_gpt" "\0"
+            VALUE "OriginalFilename", "Deep-GPTL.exe" "\0"
+            VALUE "ProductName", "Deep-GPTL" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

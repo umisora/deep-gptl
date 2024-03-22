@@ -8,6 +8,11 @@ class TranslationService {
     return prefs.getString('api_token') ?? '';
   }
 
+  Future<String> fetchSelectedModel() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('selected_model') ?? 'gpt-3.5-turbo-0125';
+  }
+
   Future<String> translateText(String text, String from, String to) async {
     try {
       final apiToken = await fetchApiToken();
@@ -15,8 +20,9 @@ class TranslationService {
         'Authorization': 'Bearer $apiToken',
         'Content-Type': 'application/json',
       };
+      final selectedModel = await fetchSelectedModel(); // 追加
       final body = json.encode({
-        'model': 'gpt-3.5-turbo-16k-0613',
+        'model': selectedModel,
         "messages": [
           {
             "role": "system",

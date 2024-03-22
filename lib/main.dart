@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:ai_translation_gpt/service/translation_service.dart';
-import 'package:ai_translation_gpt/screen/settings_screen.dart';
+import 'package:deep_gptl/service/translation_service.dart';
+import 'package:deep_gptl/screen/settings_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:clipboard/clipboard.dart';
+
+// プラットフォームチャネルの定義
+const platform = MethodChannel('com.example.deep_gptl/activate');
 
 void main() {
   runApp(MyTranslatorApp());
@@ -12,6 +15,7 @@ void main() {
 class MyTranslatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // platform.setMethodCallHandler(_handleMethod);
     return MaterialApp(
       home: HomeScreen(),
     );
@@ -58,6 +62,34 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<String> fetchSelectedModel() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('chat_gpt_model') ?? 'gpt-3.5-turbo-0125';
+  }
+
+  // ネイティブコードからのメッセージを処理
+  Future<void> _handleMethod(MethodCall call) async {
+    print('Dart side received: ${call.method}'); // 追加
+    switch (call.method) {
+      case 'activate':
+        // クリップボードからテキストを取得して翻訳する
+        Clipboard.getData('text/plain').then((clipboardContent) async {
+          // ここでクリップボードの内容を翻訳エリアに貼り付ける
+          String clipboardText = clipboardContent?.text ?? '';
+          // 仮定: textControllerは翻訳テキストフィールドのTextEditingController
+          textController.text = clipboardText;
+          // 仮定: handleTranslationは翻訳を実行するメソッド
+          await handleTranslation();
+        });
+        break;
+      default:
+        throw PlatformException(
+          code: 'Unimplemented',
+          details: 'deep_gptl for macOS not implemented: ${call.method}',
+        );
+    }
+  }
+
   Future<void> loadDefaultLanguages() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -69,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    platform.setMethodCallHandler(_handleMethod);
     loadDefaultLanguages();
   }
 
@@ -76,15 +109,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('AI Translator powered by GPT'),
+        title: Text('Deep-GPTL'),
         actions: [
           IconButton(
             icon: Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => SettingsScreen()),
               );
+              // 設定が変更された場合、画面を更新します。
+              if (result == true) {
+                setState(() {});
+              }
             },
           ),
         ],
@@ -120,16 +157,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.swap_horiz),
-                  onPressed: () {
-                    setState(() {
-                      // FromとToの言語を切り替える
-                      final temp = fromLanguage;
-                      fromLanguage = toLanguage;
-                      toLanguage = temp;
-                    });
-                  },
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.swap_horiz),
+                      onPressed: () {
+                        setState(() {
+                          // FromとToの言語を切り替える
+                          final temp = fromLanguage;
+                          fromLanguage = toLanguage;
+                          toLanguage = temp;
+                        });
+                      },
+                    ),
+                    Text(
+                      '⇧+⇔',
+                      style: TextStyle(
+                        fontSize: 12, // 小さな文字サイズ
+                      ),
+                    ),
+                  ],
                 ),
                 Expanded(
                   child: InputDecorator(
@@ -160,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: handleTranslation, // Translateボタンの処理
-              child: Text('Translate'),
+              child: Text('Translate(⇧+⏎)'),
             ),
             SizedBox(height: 16),
             Divider(
@@ -178,6 +226,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (event.isShiftPressed &&
                             event.logicalKey == LogicalKeyboardKey.enter) {
                           handleTranslation(); // 翻訳処理を実行
+                        }
+                        if (event is RawKeyUpEvent &&
+                            event.isShiftPressed &&
+                            (event.logicalKey ==
+                                    LogicalKeyboardKey.arrowRight ||
+                                event.logicalKey ==
+                                    LogicalKeyboardKey.arrowLeft)) {
+                          setState(() {
+                            // FromとToの言語を切り替える
+                            final temp = fromLanguage;
+                            fromLanguage = toLanguage;
+                            toLanguage = temp;
+                          });
+                          // 翻訳を実行する
+                          handleTranslation();
                         }
                       },
                       child: TextField(
@@ -276,13 +339,31 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.white,
               padding: EdgeInsets.all(0.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween, // 左右に配置
                 children: [
-                  Text(
-                    '♥',
-                    style: TextStyle(color: Colors.red, fontSize: 8),
+                  FutureBuilder<String>(
+                    future: fetchSelectedModel(),
+                    builder:
+                        (BuildContext context, AsyncSnapshot<String> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator();
+                      } else {
+                        return Text(
+                          'Model: ${snapshot.data}',
+                          style: TextStyle(fontSize: 8),
+                        );
+                      }
+                    },
                   ),
-                  Text(" Suns' Up Product", style: TextStyle(fontSize: 8)),
+                  Row(
+                    children: [
+                      Text(
+                        '♥',
+                        style: TextStyle(color: Colors.red, fontSize: 8),
+                      ),
+                      Text(" Suns' Up Product", style: TextStyle(fontSize: 8)),
+                    ],
+                  ),
                 ],
               ),
             ),

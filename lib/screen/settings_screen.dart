@@ -11,6 +11,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? defaultFromLanguage;
   String? defaultToLanguage;
   String? originalApiToken;
+  String? chatGPTModel; // 追加
   bool apiTokenChanged = false; // 追加
 
   Future<void> saveApiToken() async {
@@ -26,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       prefs.setString('default_from_language', defaultFromLanguage ?? '');
       prefs.setString('default_to_language', defaultToLanguage ?? '');
+      prefs.setString('chat_gpt_model', chatGPTModel ?? ''); // 追加
     });
   }
 
@@ -38,6 +40,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       originalApiToken = apiToken; // 保存しておく
       defaultFromLanguage = prefs.getString('default_from_language');
       defaultToLanguage = prefs.getString('default_to_language');
+      chatGPTModel = prefs.getString('chat_gpt_model') ??
+          'gpt-3.5-turbo-0125'; // デフォルト値を設定
     });
   }
 
@@ -122,6 +126,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 });
               },
             ),
+            // ChatGPT Model Dropdown
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                labelText: 'ChatGPT Model',
+              ),
+              hint: Text('Select ChatGPT Model'),
+              value: chatGPTModel,
+              items: ['gpt-3.5-turbo-0125', 'gpt-4-0125-preview']
+                  .map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (newValue) {
+                setState(() {
+                  chatGPTModel = newValue;
+                });
+              },
+            ),
             SizedBox(height: 10),
             SizedBox(height: 20),
             ElevatedButton(
@@ -129,8 +153,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await saveApiToken();
                 await saveDefaultLanguages();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Settings saved!')),
+                  SnackBar(
+                      content: Text('Setting Saved'),
+                      duration: Duration(milliseconds: 500)),
                 );
+                Navigator.pop(context, true);
               },
               child: Text('Save Settings'),
             ),
