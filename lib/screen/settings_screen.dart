@@ -1,3 +1,4 @@
+import 'package:deep_gptl/model/model_names.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,11 +9,14 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   TextEditingController apiTokenController = TextEditingController();
+  TextEditingController anthropicApiKeyController = TextEditingController();
   String? defaultFromLanguage;
   String? defaultToLanguage;
-  String? originalApiToken;
-  String? chatGPTModel; // 追加
-  bool apiTokenChanged = false; // 追加
+  String? openAiApiToken;
+  String? model;
+  bool apiTokenChanged = false;
+  String? anthropicApiKey;
+  bool anthropicApiKeyChanged = false;
 
   Future<void> saveApiToken() async {
     if (!apiTokenChanged) return; // 変更がなければ保存しない
@@ -27,27 +31,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       prefs.setString('default_from_language', defaultFromLanguage ?? '');
       prefs.setString('default_to_language', defaultToLanguage ?? '');
-      prefs.setString('chat_gpt_model', chatGPTModel ?? ''); // 追加
+      prefs.setString('selected_model', model ?? ''); // 追加
+      prefs.setString('anthropic_api_key', anthropicApiKey ?? ''); // 追加
     });
   }
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     String apiToken = prefs.getString('api_token') ?? '';
+    String anthropicKey = prefs.getString('anthropic_api_key') ?? '';
 
     setState(() {
       apiTokenController.text = maskApiToken(apiToken);
-      originalApiToken = apiToken; // 保存しておく
+      anthropicApiKeyController.text = maskApiToken(anthropicKey);
+      openAiApiToken = apiToken;
+      anthropicApiKey = anthropicKey;
       defaultFromLanguage = prefs.getString('default_from_language');
       defaultToLanguage = prefs.getString('default_to_language');
-      chatGPTModel = prefs.getString('chat_gpt_model') ??
+      model = prefs.getString('selected_model') ??
           'gpt-3.5-turbo-0125'; // デフォルト値を設定
     });
   }
 
   String maskApiToken(String token) {
     if (token.length < 8) return token;
-    return token.substring(0, 3) + '****' + token.substring(token.length - 4);
+    return token.substring(0, 8) + '****' + token.substring(token.length - 4);
   }
 
   @override
@@ -77,14 +85,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('Your awesome translation app'),
             Text('HP URL: https://example.com'),
             SizedBox(height: 20),
+// API Token TextField
             TextField(
               controller: apiTokenController,
               decoration: InputDecoration(
-                labelText: 'API Token',
+                labelText: 'Open AI API Key',
               ),
               onChanged: (value) {
                 // ユーザーによる変更をチェック
-                apiTokenChanged = value != originalApiToken;
+                apiTokenChanged = value != openAiApiToken;
+              },
+            ),
+// Anthropic API Key TextField 追加
+            TextField(
+              controller: anthropicApiKeyController,
+              decoration: InputDecoration(
+                labelText: 'Anthropic API Key',
+              ),
+              onChanged: (value) {
+                anthropicApiKey = value;
+                anthropicApiKeyChanged = true;
               },
             ),
 // From Language Dropdown
@@ -126,15 +146,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 });
               },
             ),
-            // ChatGPT Model Dropdown
+            // Model Dropdown
             DropdownButtonFormField<String>(
               decoration: InputDecoration(
-                labelText: 'ChatGPT Model',
+                labelText: 'Model',
               ),
-              hint: Text('Select ChatGPT Model'),
-              value: chatGPTModel,
-              items: ['gpt-3.5-turbo-0125', 'gpt-4-0125-preview']
-                  .map((String value) {
+              hint: Text('Select Model'),
+              value: model,
+              items: ModelNames.names.map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -142,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }).toList(),
               onChanged: (newValue) {
                 setState(() {
-                  chatGPTModel = newValue;
+                  model = newValue;
                 });
               },
             ),

@@ -1,3 +1,4 @@
+import 'package:deep_gptl/model/model_names.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:deep_gptl/service/translation_service.dart';
@@ -85,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<String> _fetchSelectedModel() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('chat_gpt_model') ?? 'gpt-3.5-turbo-0125';
+    return prefs.getString('selected_model') ?? 'unknown';
   }
 
   @override
@@ -289,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFooter() {
     return Container(
-      color: Colors.white,
+      // color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.all(0.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -300,9 +301,22 @@ class _HomeScreenState extends State<HomeScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return CircularProgressIndicator();
               } else {
-                return Text(
-                  'Model: ${snapshot.data}',
-                  style: TextStyle(fontSize: 8),
+                return DropdownButton<String>(
+                  value: snapshot.data,
+                  underline: Container(),
+                  icon: Icon(Icons.arrow_downward, size: 12),
+                  items: ModelNames.names
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value, style: TextStyle(fontSize: 10)),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('selected_model', newValue ?? '');
+                    setState(() {});
+                  },
                 );
               }
             },
@@ -311,9 +325,9 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 '♥',
-                style: TextStyle(color: Colors.red, fontSize: 8),
+                style: TextStyle(color: Colors.red, fontSize: 10),
               ),
-              Text(" Suns' Up Product", style: TextStyle(fontSize: 8)),
+              Text(" Suns' Up Product", style: TextStyle(fontSize: 10)),
             ],
           ),
         ],
