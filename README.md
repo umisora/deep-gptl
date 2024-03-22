@@ -1,4 +1,4 @@
-# ai_translation_gpt
+# deep-gptl
 
 A new Flutter project.
 
